@@ -1,4 +1,4 @@
-version: '3.8'
+# Version supprimée pour compatibilité avec Docker Compose v2
 
 services:
   liturgy-app:

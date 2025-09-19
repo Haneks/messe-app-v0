@@ -1,5 +1,46 @@
 # Guide Docker pour l'Application Liturgique
 
+## ⚠️ Résolution des problèmes de compatibilité
+
+### Erreur Python 3.12 / docker-compose
+Si vous rencontrez l'erreur `ModuleNotFoundError: No module named 'distutils'`, voici les solutions :
+
+#### Solution 1 : Utiliser Docker Compose V2 (Recommandé)
+```bash
+# Utiliser la nouvelle syntaxe Docker Compose V2
+docker compose up -d --build
+docker compose down
+docker compose logs -f liturgy-app
+```
+
+#### Solution 2 : Installer Docker Compose V2
+```bash
+# Sur Ubuntu/Debian
+sudo apt-get update
+sudo apt-get install docker-compose-plugin
+
+# Vérifier l'installation
+docker compose version
+```
+
+#### Solution 3 : Installer distutils (temporaire)
+```bash
+# Sur Ubuntu/Debian
+sudo apt-get install python3-distutils
+
+# Sur Fedora/CentOS
+sudo dnf install python3-distutils
+```
+
+#### Solution 4 : Utiliser Docker directement
+```bash
+# Construction de l'image
+docker build -t messe-app .
+
+# Lancement du conteneur
+docker run -d -p 3000:80 --name messe-app-container messe-app
+```
+
 ## 🐳 Déploiement avec Docker
 
 ### Prérequis
@@ -19,13 +60,19 @@ docker run -d -p 3000:80 --name messe-app-container messe-app
 ### Utilisation avec Docker Compose (Recommandé)
 
 ```bash
-# Lancement de l'application
-docker-compose up -d
+# Lancement de l'application (Docker Compose V2)
+docker compose up -d
 
 # Arrêt de l'application
-docker-compose down
+docker compose down
 
 # Reconstruction et relancement
+docker compose up -d --build
+```
+
+### Alternative avec Docker Compose V1
+```bash
+# Si vous devez utiliser l'ancienne version
 docker-compose up -d --build
 ```
 
