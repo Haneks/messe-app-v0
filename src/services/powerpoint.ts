@@ -3,6 +3,10 @@ import { LiturgyPresentation, LiturgyReading, Song, SlideItem } from '../types/l
 import { getLiturgicalSeason } from '../utils/liturgicalColors';
 
 export class PowerPointService {
+  private static readonly TARGET_WORDS_PER_SLIDE = 85; // Target 80-90 words
+  private static readonly MIN_WORDS_PER_SLIDE = 80;
+  private static readonly MAX_WORDS_PER_SLIDE = 90;
+
   static async exportPresentation(presentation: LiturgyPresentation): Promise<void> {
     const pptx = new PptxGenJS();
     
@@ -26,7 +30,7 @@ export class PowerPointService {
       w: 9,
       h: 1.5,
       fontSize: 44,
-      color: liturgicalSeason.textColor,
+      color: 'FFFFFF',
       align: 'center',
       fontFace: 'Arial',
       bold: true
@@ -43,7 +47,7 @@ export class PowerPointService {
       w: 9,
       h: 1,
       fontSize: 24,
-      color: liturgicalSeason.textColor,
+      color: 'FFFFFF',
       align: 'center',
       fontFace: 'Arial'
     });
@@ -55,7 +59,7 @@ export class PowerPointService {
       w: 0.5,
       h: 0.3,
       fontSize: 12,
-      color: liturgicalSeason.textColor,
+      color: 'FFFFFF',
       align: 'center',
       fontFace: 'Arial'
     });
@@ -69,13 +73,13 @@ export class PowerPointService {
       if (slideItem.type === 'reading') {
         const reading = presentation.readings.find(r => r.id === slideItem.id);
         if (reading) {
-          const readingSlides = this.createReadingSlides(pptx, reading, liturgicalSeason, slideNumber);
+          const readingSlides = this.createOptimizedReadingSlides(pptx, reading, liturgicalSeason, slideNumber);
           slideNumber += readingSlides;
         }
       } else if (slideItem.type === 'song') {
         const song = presentation.songs.find(s => s.id === slideItem.id);
         if (song) {
-          const songSlides = this.createSongSlides(pptx, song, liturgicalSeason, slideNumber);
+          const songSlides = this.createOptimizedSongSlides(pptx, song, liturgicalSeason, slideNumber);
           slideNumber += songSlides;
         }
       }
@@ -85,7 +89,7 @@ export class PowerPointService {
     await pptx.writeFile({ fileName: `${presentation.title}.pptx` });
   }
 
-  private static createReadingSlides(
+  private static createOptimizedReadingSlides(
     pptx: PptxGenJS, 
     reading: LiturgyReading, 
     liturgicalSeason: any, 
@@ -95,7 +99,7 @@ export class PowerPointService {
 
     // Slide de titre pour la lecture
     const titleSlide = pptx.addSlide();
-    titleSlide.background = { color: liturgicalSeason.backgroundColor };
+    titleSlide.background = { color: 'F8FAFC' };
 
     titleSlide.addText(reading.title, {
       x: 0.5,
@@ -103,7 +107,7 @@ export class PowerPointService {
       w: 9,
       h: 1.2,
       fontSize: 36,
-      color: liturgicalSeason.textColor,
+      color: '1E40AF',
       bold: true,
       align: 'center',
       fontFace: 'Arial'
@@ -115,7 +119,7 @@ export class PowerPointService {
       w: 9,
       h: 0.8,
       fontSize: 24,
-      color: liturgicalSeason.textColor,
+      color: '64748B',
       italic: true,
       align: 'center',
       fontFace: 'Arial'
@@ -128,22 +132,22 @@ export class PowerPointService {
       w: 0.5,
       h: 0.3,
       fontSize: 12,
-      color: liturgicalSeason.textColor,
+      color: '64748B',
       align: 'center',
       fontFace: 'Arial'
     });
 
     slideCount++;
 
-    // Diviser le texte en paragraphes
-    const paragraphs = this.splitTextIntoParagraphs(reading.text);
+    // Optimiser le contenu pour 80-90 mots par slide
+    const optimizedChunks = this.optimizeContentForWordCount(reading.text);
 
-    paragraphs.forEach((paragraph, index) => {
+    optimizedChunks.forEach((chunk, index) => {
       const slide = pptx.addSlide();
-      slide.background = { color: liturgicalSeason.backgroundColor };
+      slide.background = { color: 'F8FAFC' };
 
-      // Titre de la slide basé sur le contenu du paragraphe
-      const slideTitle = this.generateSlideTitle(paragraph, reading.title, index + 1);
+      // Titre de la slide
+      const slideTitle = `${reading.title} (${index + 1}/${optimizedChunks.length})`;
       
       slide.addText(slideTitle, {
         x: 0.5,
@@ -151,26 +155,36 @@ export class PowerPointService {
         w: 9,
         h: 0.8,
         fontSize: 28,
-        color: liturgicalSeason.textColor,
+        color: '1E40AF',
         bold: true,
         align: 'center',
         fontFace: 'Arial'
       });
 
-      // Contenu formaté du paragraphe
-      const formattedContent = this.formatParagraphContent(paragraph);
-      
-      slide.addText(formattedContent, {
+      // Contenu optimisé
+      slide.addText(chunk.content, {
         x: 0.8,
         y: 1.8,
         w: 8.4,
         h: 5,
         fontSize: 20,
-        color: liturgicalSeason.textColor,
+        color: '1F2937',
         align: 'left',
         fontFace: 'Arial',
         valign: 'top',
         lineSpacing: 28
+      });
+
+      // Indicateur de nombre de mots (pour debug)
+      slide.addText(`${chunk.wordCount} mots`, {
+        x: 0.5,
+        y: 7.2,
+        w: 2,
+        h: 0.3,
+        fontSize: 10,
+        color: '94A3B8',
+        align: 'left',
+        fontFace: 'Arial'
       });
 
       // Numéro de slide
@@ -180,7 +194,7 @@ export class PowerPointService {
         w: 0.5,
         h: 0.3,
         fontSize: 12,
-        color: liturgicalSeason.textColor,
+        color: '64748B',
         align: 'center',
         fontFace: 'Arial'
       });
@@ -191,7 +205,7 @@ export class PowerPointService {
     return slideCount;
   }
 
-  private static createSongSlides(
+  private static createOptimizedSongSlides(
     pptx: PptxGenJS, 
     song: Song, 
     liturgicalSeason: any, 
@@ -201,7 +215,7 @@ export class PowerPointService {
 
     // Slide de titre pour le chant
     const titleSlide = pptx.addSlide();
-    titleSlide.background = { color: liturgicalSeason.backgroundColor };
+    titleSlide.background = { color: 'FEF3C7' };
 
     titleSlide.addText(song.title, {
       x: 0.5,
@@ -209,7 +223,7 @@ export class PowerPointService {
       w: 9,
       h: 1.2,
       fontSize: 32,
-      color: liturgicalSeason.textColor,
+      color: 'D97706',
       bold: true,
       align: 'center',
       fontFace: 'Arial'
@@ -223,7 +237,7 @@ export class PowerPointService {
         w: 9,
         h: 0.6,
         fontSize: 18,
-        color: liturgicalSeason.textColor,
+        color: '92400E',
         italic: true,
         align: 'center',
         fontFace: 'Arial'
@@ -237,22 +251,22 @@ export class PowerPointService {
       w: 0.5,
       h: 0.3,
       fontSize: 12,
-      color: liturgicalSeason.textColor,
+      color: '92400E',
       align: 'center',
       fontFace: 'Arial'
     });
 
     slideCount++;
 
-    // Diviser les paroles en couplets/strophes
-    const verses = this.splitSongIntoVerses(song.lyrics);
+    // Optimiser les paroles pour 80-90 mots par slide
+    const optimizedVerses = this.optimizeSongForWordCount(song.lyrics);
 
-    verses.forEach((verse, index) => {
+    optimizedVerses.forEach((verse, index) => {
       const slide = pptx.addSlide();
-      slide.background = { color: liturgicalSeason.backgroundColor };
+      slide.background = { color: 'FEF3C7' };
 
       // Titre de la slide
-      const slideTitle = this.generateVerseTitle(verse, song.title, index + 1);
+      const slideTitle = this.generateOptimizedVerseTitle(verse, song.title, index + 1, optimizedVerses.length);
       
       slide.addText(slideTitle, {
         x: 0.5,
@@ -260,24 +274,36 @@ export class PowerPointService {
         w: 9,
         h: 0.8,
         fontSize: 24,
-        color: liturgicalSeason.textColor,
+        color: 'D97706',
         bold: true,
         align: 'center',
         fontFace: 'Arial'
       });
 
-      // Paroles formatées
-      slide.addText(verse.trim(), {
+      // Paroles optimisées
+      slide.addText(verse.content, {
         x: 1,
         y: 1.8,
         w: 8,
         h: 5,
         fontSize: 18,
-        color: liturgicalSeason.textColor,
+        color: '1F2937',
         align: 'center',
         fontFace: 'Arial',
         valign: 'top',
         lineSpacing: 24
+      });
+
+      // Indicateur de nombre de mots
+      slide.addText(`${verse.wordCount} mots`, {
+        x: 0.5,
+        y: 7.2,
+        w: 2,
+        h: 0.3,
+        fontSize: 10,
+        color: '92400E',
+        align: 'left',
+        fontFace: 'Arial'
       });
 
       // Numéro de slide
@@ -287,7 +313,7 @@ export class PowerPointService {
         w: 0.5,
         h: 0.3,
         fontSize: 12,
-        color: liturgicalSeason.textColor,
+        color: '92400E',
         align: 'center',
         fontFace: 'Arial'
       });
@@ -298,103 +324,184 @@ export class PowerPointService {
     return slideCount;
   }
 
-  private static splitTextIntoParagraphs(text: string): string[] {
-    // Diviser le texte en paragraphes basés sur les sauts de ligne doubles ou les points suivis d'espaces
-    const paragraphs = text
-      .split(/\n\s*\n|\.\s+(?=[A-Z])/g)
-      .map(p => p.trim())
-      .filter(p => p.length > 0);
-
-    // Si un seul paragraphe très long, le diviser par phrases
-    if (paragraphs.length === 1 && paragraphs[0].length > 400) {
-      return this.splitLongParagraph(paragraphs[0]);
-    }
-
-    return paragraphs;
-  }
-
-  private static splitLongParagraph(paragraph: string): string[] {
-    const sentences = paragraph.split(/(?<=[.!?])\s+/);
-    const chunks: string[] = [];
+  private static optimizeContentForWordCount(text: string): Array<{content: string, wordCount: number}> {
+    const sentences = this.splitIntoSentences(text);
+    const optimizedChunks: Array<{content: string, wordCount: number}> = [];
+    
     let currentChunk = '';
+    let currentWordCount = 0;
 
     for (const sentence of sentences) {
-      if ((currentChunk + sentence).length > 300 && currentChunk.length > 0) {
-        chunks.push(currentChunk.trim());
+      const sentenceWordCount = this.countWords(sentence);
+      const potentialWordCount = currentWordCount + sentenceWordCount;
+
+      // Si ajouter cette phrase dépasse la limite maximale et qu'on a déjà du contenu
+      if (potentialWordCount > this.MAX_WORDS_PER_SLIDE && currentWordCount > 0) {
+        // Si le chunk actuel est trop petit, essayer d'ajouter une phrase courte
+        if (currentWordCount < this.MIN_WORDS_PER_SLIDE && sentenceWordCount <= 15) {
+          currentChunk += (currentChunk ? ' ' : '') + sentence;
+          currentWordCount = potentialWordCount;
+        }
+        
+        // Finaliser le chunk actuel
+        if (currentChunk.trim()) {
+          optimizedChunks.push({
+            content: currentChunk.trim(),
+            wordCount: currentWordCount
+          });
+        }
+        
+        // Commencer un nouveau chunk
         currentChunk = sentence;
+        currentWordCount = sentenceWordCount;
       } else {
+        // Ajouter la phrase au chunk actuel
         currentChunk += (currentChunk ? ' ' : '') + sentence;
+        currentWordCount = potentialWordCount;
       }
     }
 
+    // Ajouter le dernier chunk s'il existe
     if (currentChunk.trim()) {
-      chunks.push(currentChunk.trim());
+      optimizedChunks.push({
+        content: currentChunk.trim(),
+        wordCount: currentWordCount
+      });
     }
 
-    return chunks;
+    // Post-traitement : fusionner les chunks trop petits avec le suivant
+    return this.mergeSmallChunks(optimizedChunks);
   }
 
-  private static splitSongIntoVerses(lyrics: string): string[] {
-    // Diviser les paroles en couplets basés sur les lignes vides ou les marqueurs de refrain
-    const verses = lyrics
-      .split(/\n\s*\n|(?=R\/)|(?<=\n)(?=\d+\.)/g)
-      .map(v => v.trim())
-      .filter(v => v.length > 0);
+  private static optimizeSongForWordCount(lyrics: string): Array<{content: string, wordCount: number, type: string}> {
+    // Diviser en sections (couplets, refrains)
+    const sections = this.splitSongIntoSections(lyrics);
+    const optimizedVerses: Array<{content: string, wordCount: number, type: string}> = [];
 
-    // Limiter chaque couplet à 6-8 lignes maximum
-    const processedVerses: string[] = [];
-    
-    for (const verse of verses) {
-      const lines = verse.split('\n');
-      if (lines.length <= 8) {
-        processedVerses.push(verse);
+    for (const section of sections) {
+      const wordCount = this.countWords(section.content);
+      
+      if (wordCount <= this.MAX_WORDS_PER_SLIDE) {
+        // La section tient dans une slide
+        optimizedVerses.push({
+          content: section.content,
+          wordCount: wordCount,
+          type: section.type
+        });
       } else {
-        // Diviser les longs couplets
-        for (let i = 0; i < lines.length; i += 6) {
-          const chunk = lines.slice(i, i + 6).join('\n');
-          processedVerses.push(chunk);
+        // Diviser la section en plusieurs slides
+        const lines = section.content.split('\n');
+        let currentVerse = '';
+        let currentWordCount = 0;
+
+        for (const line of lines) {
+          const lineWordCount = this.countWords(line);
+          const potentialWordCount = currentWordCount + lineWordCount;
+
+          if (potentialWordCount > this.MAX_WORDS_PER_SLIDE && currentWordCount > 0) {
+            optimizedVerses.push({
+              content: currentVerse.trim(),
+              wordCount: currentWordCount,
+              type: section.type
+            });
+            
+            currentVerse = line;
+            currentWordCount = lineWordCount;
+          } else {
+            currentVerse += (currentVerse ? '\n' : '') + line;
+            currentWordCount = potentialWordCount;
+          }
+        }
+
+        if (currentVerse.trim()) {
+          optimizedVerses.push({
+            content: currentVerse.trim(),
+            wordCount: currentWordCount,
+            type: section.type
+          });
         }
       }
     }
 
-    return processedVerses;
+    return optimizedVerses;
   }
 
-  private static generateSlideTitle(paragraph: string, readingTitle: string, index: number): string {
-    // Extraire les premiers mots significatifs pour créer un titre
-    const words = paragraph.split(' ').slice(0, 6);
-    let title = words.join(' ');
-    
-    // Nettoyer et raccourcir le titre
-    title = title.replace(/[.!?].*$/, '');
-    if (title.length > 50) {
-      title = title.substring(0, 47) + '...';
-    }
-
-    return `${readingTitle} (${index})`;
+  private static splitIntoSentences(text: string): string[] {
+    // Diviser en phrases en préservant la ponctuation
+    return text
+      .split(/(?<=[.!?])\s+/)
+      .map(sentence => sentence.trim())
+      .filter(sentence => sentence.length > 0);
   }
 
-  private static generateVerseTitle(verse: string, songTitle: string, index: number): string {
-    // Identifier le type de couplet
-    if (verse.startsWith('R/') || verse.toLowerCase().includes('refrain')) {
-      return `${songTitle} - Refrain`;
-    } else if (/^\d+\./.test(verse)) {
-      const match = verse.match(/^(\d+)\./);
-      return `${songTitle} - Couplet ${match ? match[1] : index}`;
-    } else {
-      return `${songTitle} - Partie ${index}`;
-    }
-  }
+  private static splitSongIntoSections(lyrics: string): Array<{content: string, type: string}> {
+    const sections: Array<{content: string, type: string}> = [];
+    const parts = lyrics.split(/\n\s*\n/);
 
-  private static formatParagraphContent(paragraph: string): string {
-    // Formater le contenu en points clés si le paragraphe est long
-    if (paragraph.length > 200) {
-      const sentences = paragraph.split(/(?<=[.!?])\s+/);
-      if (sentences.length > 2) {
-        return sentences.map(sentence => `• ${sentence.trim()}`).join('\n');
+    for (const part of parts) {
+      const trimmedPart = part.trim();
+      if (trimmedPart.length === 0) continue;
+
+      let type = 'verse';
+      if (trimmedPart.startsWith('R/') || trimmedPart.toLowerCase().includes('refrain')) {
+        type = 'refrain';
+      } else if (/^\d+\./.test(trimmedPart)) {
+        type = 'numbered_verse';
       }
+
+      sections.push({
+        content: trimmedPart,
+        type: type
+      });
+    }
+
+    return sections;
+  }
+
+  private static countWords(text: string): number {
+    return text.trim().split(/\s+/).filter(word => word.length > 0).length;
+  }
+
+  private static mergeSmallChunks(chunks: Array<{content: string, wordCount: number}>): Array<{content: string, wordCount: number}> {
+    const mergedChunks: Array<{content: string, wordCount: number}> = [];
+    
+    for (let i = 0; i < chunks.length; i++) {
+      const currentChunk = chunks[i];
+      
+      // Si le chunk est trop petit et qu'il y a un chunk suivant
+      if (currentChunk.wordCount < this.MIN_WORDS_PER_SLIDE && i < chunks.length - 1) {
+        const nextChunk = chunks[i + 1];
+        const combinedWordCount = currentChunk.wordCount + nextChunk.wordCount;
+        
+        // Si la combinaison ne dépasse pas la limite maximale
+        if (combinedWordCount <= this.MAX_WORDS_PER_SLIDE) {
+          mergedChunks.push({
+            content: currentChunk.content + ' ' + nextChunk.content,
+            wordCount: combinedWordCount
+          });
+          i++; // Ignorer le chunk suivant car il a été fusionné
+          continue;
+        }
+      }
+      
+      mergedChunks.push(currentChunk);
     }
     
-    return paragraph;
+    return mergedChunks;
+  }
+
+  private static generateOptimizedVerseTitle(verse: any, songTitle: string, index: number, total: number): string {
+    let baseTitle = songTitle;
+    
+    if (verse.type === 'refrain') {
+      baseTitle += ' - Refrain';
+    } else if (verse.type === 'numbered_verse') {
+      const match = verse.content.match(/^(\d+)\./);
+      baseTitle += ` - Couplet ${match ? match[1] : index}`;
+    } else {
+      baseTitle += ` - Partie ${index}`;
+    }
+    
+    return `${baseTitle} (${index}/${total})`;
   }
 }
