@@ -17,6 +17,7 @@ export interface ImageGenerationProgress {
   slideIndex?: number;
   totalSlides?: number;
 }
+
 export class PowerPointImageService {
   private static readonly PYTHON_SCRIPT_PATH = 'src/services/powerpoint-image-generator.py';
 
@@ -156,6 +157,24 @@ export class PowerPointImageService {
       return '';
     }
   }
+  
+  static showNotification(message: string, type: 'success' | 'error' | 'info' = 'info'): void {
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    notification.textContent = message;
+    notification.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 15px 20px;
+      border-radius: 5px;
+      color: white;
+      font-weight: bold;
+      z-index: 10000;
+      max-width: 300px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      background-color: ${type === 'success' ? '#4CAF50' : type === 'error' ? '#f44336' : '#2196F3'};
+    `;
     
     document.body.appendChild(notification);
     
