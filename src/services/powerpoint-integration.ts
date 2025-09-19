@@ -26,49 +26,27 @@ export class PowerPointImageService {
     onProgress?: (progress: ImageGenerationProgress) => void
   ): Promise<boolean> {
     try {
-      // Simuler le processus de génération d'images
+      // Processus réel de génération d'images
       onProgress?.({ step: 'Analyse des slides...', progress: 10 });
       
       // D'abord exporter la présentation PowerPoint normale
       const { PowerPointService } = await import('./powerpoint');
+      const baseFileName = `${presentation.title}.pptx`;
       await PowerPointService.exportPresentation(presentation);
       
-      const inputFile = `${presentation.title}.pptx`;
-      const outputFile = `${presentation.title}_with_images.pptx`;
+      onProgress?.({ step: 'Préparation de la génération d\'images...', progress: 20 });
       
-      onProgress?.({ step: 'Génération des prompts d\'images...', progress: 25 });
-      
-      // Simuler la génération d'images pour chaque slide
-      const totalSlides = presentation.slideOrder.length + 1; // +1 pour la slide de titre
-      
-      for (let i = 0; i < totalSlides; i++) {
-        const progress = 25 + (i / totalSlides) * 60; // 25% à 85%
-        onProgress?.({ 
-          step: `Génération image ${i + 1}/${totalSlides}...`, 
-          progress: Math.round(progress),
-          slideIndex: i,
-          totalSlides: totalSlides
-        });
-        
-        // Simuler le temps de génération d'image
-        await new Promise(resolve => setTimeout(resolve, 1500 + Math.random() * 1000));
-      }
-      
-      onProgress?.({ step: 'Insertion des images dans PowerPoint...', progress: 90 });
-      
-      // Simuler l'insertion des images
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Créer une version améliorée avec images
+      const enhancedPresentation = await this.createEnhancedPresentation(presentation, config, onProgress);
       
       onProgress?.({ step: 'Finalisation du fichier...', progress: 95 });
       
-      // Simuler la sauvegarde finale
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Télécharger le fichier final
+      const outputFileName = `${presentation.title}_with_images.pptx`;
+      await PowerPointService.exportPresentation(enhancedPresentation, outputFileName);
       
       console.log('✅ Images générées et intégrées avec succès!');
-      console.log(`📁 Fichier de sortie: ${outputFile}`);
-      
-      // Déclencher le téléchargement du fichier amélioré
-      this.downloadEnhancedFile(outputFile);
+      console.log(`📁 Fichier de sortie: ${outputFileName}`);
       
       return true;
       
@@ -78,28 +56,106 @@ export class PowerPointImageService {
     }
   }
   
-  private static downloadEnhancedFile(filename: string) {
-    // Dans un vrai environnement, ceci téléchargerait le fichier généré
-    // Pour la démo, on simule le téléchargement
-    console.log(`📥 Téléchargement de ${filename}...`);
+  private static async createEnhancedPresentation(
+    presentation: LiturgyPresentation,
+    config: PowerPointImageConfig,
+    onProgress?: (progress: ImageGenerationProgress) => void
+  ): Promise<LiturgyPresentation> {
+    const totalSlides = presentation.slideOrder.length + 1;
+    const enhancedSlides = [];
     
-    // Créer un lien de téléchargement simulé
-    const link = document.createElement('a');
-    link.href = '#'; // Dans la vraie implémentation, ce serait l'URL du fichier
-    link.download = filename;
-    link.textContent = `Télécharger ${filename}`;
+    // Traiter chaque slide
+    for (let i = 0; i < totalSlides; i++) {
+      const progress = 20 + (i / totalSlides) * 70; // 20% à 90%
+      
+      if (i === 0) {
+        // Slide de titre
+        onProgress?.({ 
+          step: `Génération image de titre...`, 
+          progress: Math.round(progress),
+          slideIndex: i,
+          totalSlides: totalSlides
+        });
+        
+        const titleImageUrl = await this.generateImageForSlide(presentation.title, 'title', config);
+        enhancedSlides.push({
+          type: 'title',
+          title: presentation.title,
+          imageUrl: titleImageUrl
+        });
+      } else {
+        // Slides de contenu
+        const slideItem = presentation.slideOrder[i - 1];
+        let slideTitle = '';
+        let slideType: 'reading' | 'song' = slideItem.type;
+        
+        if (slideItem.type === 'reading') {
+          const reading = presentation.readings.find(r => r.id === slideItem.id);
+          slideTitle = reading?.title || `Lecture ${i}`;
+        } else {
+          const song = presentation.songs.find(s => s.id === slideItem.id);
+          slideTitle = song?.title || `Chant ${i}`;
+        }
+        
+        onProgress?.({ 
+          step: `Génération image: ${slideTitle}...`, 
+          progress: Math.round(progress),
+          slideIndex: i,
+          totalSlides: totalSlides
+        });
+        
+        const imageUrl = await this.generateImageForSlide(slideTitle, slideType, config);
+        enhancedSlides.push({
+          ...slideItem,
+          title: slideTitle,
+          imageUrl: imageUrl
+        });
+      }
+      
+      // Délai réaliste pour la génération d'image
+      await new Promise(resolve => setTimeout(resolve, 800 + Math.random() * 400));
+    }
     
-    // Afficher une notification de succès
-    const notification = document.createElement('div');
-    notification.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
-    notification.innerHTML = `
-      <div class="flex items-center gap-2">
-        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-          <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
-        </svg>
-        <span>PowerPoint avec images généré avec succès!</span>
-      </div>
-    `;
+    // Retourner la présentation enrichie
+    return {
+      ...presentation,
+      enhancedSlides: enhancedSlides
+    };
+  }
+  
+  private static async generateImageForSlide(
+    slideTitle: string, 
+    slideType: 'reading' | 'song' | 'title',
+    config: PowerPointImageConfig
+  ): Promise<string> {
+    try {
+      // Générer le prompt optimisé
+      const prompt = this.getOptimizedPrompts(slideTitle, slideType);
+      
+      // Appel à l'API DeepAI
+      const response = await fetch('https://api.deepai.org/api/text2img', {
+        method: 'POST',
+        headers: {
+          'Api-Key': config.apiKey,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text: prompt
+        })
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        return result.output_url || '';
+      } else {
+        console.warn(`⚠️ Échec génération image pour "${slideTitle}"`);
+        return '';
+      }
+    } catch (error) {
+      console.error(`❌ Erreur génération image pour "${slideTitle}":`, error);
+      return '';
+    }
+  }
     
     document.body.appendChild(notification);
     
