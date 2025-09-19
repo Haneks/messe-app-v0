@@ -9,7 +9,11 @@ export default defineConfig({
       '/api/aelf': {
         target: 'https://api.aelf.org',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api\/aelf/, '')
+        rewrite: (path) => path.replace(/^\/api\/aelf/, ''),
+        secure: true,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (compatible; LiturgyApp/1.0)'
+        }
       }
     }
   },

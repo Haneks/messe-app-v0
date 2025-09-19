@@ -24,7 +24,7 @@ interface AELFApiResponse {
 
 // Service pour récupérer les textes liturgiques de l'AELF
 export class AELFService {
-  private static readonly BASE_URL = 'https://api.aelf.org';
+  private static readonly BASE_URL = '/api/aelf';
   private static readonly ZONE = 'france';
 
   static async getReadingsForDate(date: string): Promise<AELFResponse> {
