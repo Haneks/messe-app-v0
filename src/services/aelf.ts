@@ -40,12 +40,23 @@ export class AELFService {
         headers: {
           'Accept': 'application/json',
           'Content-Type': 'application/json',
+          'User-Agent': 'Mozilla/5.0 (compatible; LiturgyApp/1.0)',
         },
+        // Ajouter un timeout
+        signal: AbortSignal.timeout(30000), // 30 secondes
       });
 
       if (!response.ok) {
-        console.warn(`Erreur API AELF (${response.status}):`, response.statusText);
-        return this.getMockReadings(date, `Erreur API: ${response.status} ${response.statusText}`);
+        const errorMessage = `Erreur API AELF (${response.status}): ${response.statusText}`;
+        console.warn(errorMessage);
+        
+        // Essayer une approche alternative pour certaines erreurs
+        if (response.status === 502 || response.status === 503) {
+          console.log('Tentative avec une approche alternative...');
+          return this.tryAlternativeApproach(date);
+        }
+        
+        return this.getMockReadings(date, errorMessage);
       }
 
       const data: AELFApiResponse = await response.json();
@@ -54,11 +65,47 @@ export class AELFService {
       return this.parseAELFResponse(data, date);
     } catch (error) {
       console.error('Erreur lors de la récupération des textes AELF:', error);
+      
+      // Si c'est une erreur de timeout ou de réseau, essayer l'approche alternative
+      if (error instanceof Error && (error.name === 'AbortError' || error.message.includes('fetch'))) {
+        console.log('Tentative avec approche alternative après erreur réseau...');
+        return this.tryAlternativeApproach(date);
+      }
+      
       // Fallback vers les données simulées en cas d'erreur
       return this.getMockReadings(date, error instanceof Error ? error.message : 'Erreur inconnue lors du chargement des textes liturgiques');
     }
   }
 
+  private static async tryAlternativeApproach(date: string): Promise<AELFResponse> {
+    try {
+      // Essayer d'accéder directement à l'API sans proxy
+      const directUrl = `https://api.aelf.org/v1/messes/${date}/${this.ZONE}`;
+      console.log('Tentative d\'accès direct:', directUrl);
+      
+      const response = await fetch(directUrl, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'User-Agent': 'Mozilla/5.0 (compatible; LiturgyApp/1.0)',
+        },
+        mode: 'cors',
+        signal: AbortSignal.timeout(15000), // 15 secondes
+      });
+
+      if (response.ok) {
+        const data: AELFApiResponse = await response.json();
+        console.log('Succès avec l\'approche alternative');
+        return this.parseAELFResponse(data, date);
+      }
+    } catch (error) {
+      console.log('Approche alternative échouée:', error);
+    }
+    
+    // Si tout échoue, retourner les données simulées
+    return this.getMockReadings(date, 'Impossible de contacter l\'API AELF. Utilisation des données d\'exemple.');
+  }
   private static parseAELFResponse(data: AELFApiResponse, date: string): AELFResponse {
     const readings: AELFResponse['readings'] = {};
 
