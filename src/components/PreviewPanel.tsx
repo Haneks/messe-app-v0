@@ -55,15 +55,10 @@ export default function PreviewPanel({ presentation }: PreviewPanelProps) {
       };
       
       // Étape 3: Génération et insertion des images
-      setExportProgress({ step: 'Génération des images contextuelles...', progress: 50 });
+      setExportProgress({ step: 'Génération des images contextuelles...', progress: 40 });
       const success = await PowerPointImageService.enhanceWithImages(presentation, config);
       
       if (success) {
-        setExportProgress({ step: 'Finalisation de l\'export...', progress: 90 });
-        
-        // Petit délai pour montrer la progression
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
         setExportProgress({ step: 'Export terminé !', progress: 100 });
         
         // Afficher le succès pendant 2 secondes
@@ -77,7 +72,7 @@ export default function PreviewPanel({ presentation }: PreviewPanelProps) {
       
     } catch (error) {
       console.error('Erreur lors de l\'export avec images:', error);
-      alert('Erreur lors de la génération d\'images. Export PowerPoint standard effectué.');
+      alert('Erreur lors de la génération d\'images. Veuillez vérifier votre clé API DeepAI.');
     } finally {
       setExportingWithImages(false);
     }
