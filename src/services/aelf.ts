@@ -31,7 +31,7 @@ export class AELFService {
     try {
       // Format de date pour l'API AELF (YYYY-MM-DD)
       const formattedDate = date; // La date est déjà au bon format
-      const url = `${this.BASE_URL}/v1/messes/${formattedDate}/${this.ZONE}`;
+      const url = `${this.BASE_URL}v1/messes/${formattedDate}/${this.ZONE}`;
       
       console.log('Appel API AELF:', url);
       
@@ -40,7 +40,9 @@ export class AELFService {
         headers: {
           'Accept': 'application/json',
           'Content-Type': 'application/json',
-          'User-Agent': 'Mozilla/5.0 (compatible; LiturgyApp/1.0)',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
         },
         // Ajouter un timeout
         signal: AbortSignal.timeout(30000), // 30 secondes
