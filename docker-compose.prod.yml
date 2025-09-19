@@ -20,7 +20,6 @@ services:
       - "443:443"
     volumes:
       - ./nginx-https.conf:/etc/nginx/nginx.conf:ro
-      - ./ssl:/etc/nginx/ssl:ro
       - ./certbot/conf:/etc/letsencrypt:ro
       - ./certbot/www:/var/www/certbot:ro
     depends_on:
@@ -33,9 +32,9 @@ services:
     image: certbot/certbot
     container_name: certbot
     volumes:
-      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/conf:/etc/letsencrypt:rw
       - ./certbot/www:/var/www/certbot
-    command: certonly --webroot -w /var/www/certbot --force-renewal --email votre-email@example.com -d votre-domaine.com --agree-tos
+    command: certonly --webroot -w /var/www/certbot --email votre-email@example.com -d votre-domaine.com --agree-tos --non-interactive
     profiles:
       - ssl-setup
 
