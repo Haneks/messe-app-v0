@@ -30,7 +30,7 @@ class Config:
     """Configuration class for the PowerPoint Image Generator"""
     
     # DeepAI API Configuration
-    DEEPAI_API_KEY = os.getenv('DEEPAI_API_KEY', 'your-deepai-api-key-here')
+    DEEPAI_API_KEY = os.getenv('DEEPAI_API_KEY', 'f2c9bdf5-217a-452e-bf0f-3c5f5f5785c2')
     DEEPAI_API_URL = 'https://api.deepai.org/api/text2img'
     
     # Image Configuration
