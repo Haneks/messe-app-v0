@@ -17,6 +17,10 @@ export class PowerPointService {
     pptx.author = 'Application Liturgique';
     pptx.title = presentation.title;
     pptx.subject = 'Présentation pour la messe';
+    
+    // Métadonnées pour l'intégration d'images
+    pptx.company = 'Liturgy App';
+    pptx.category = 'Religious Presentation';
 
     let slideNumber = 1;
 
@@ -87,6 +91,10 @@ export class PowerPointService {
 
     // Télécharger le fichier
     await pptx.writeFile({ fileName: `${presentation.title}.pptx` });
+    
+    // Log pour le débogage
+    console.log(`📄 PowerPoint exporté: ${presentation.title}.pptx`);
+    console.log(`📊 ${slideNumber - 1} slides créées`);
   }
 
   private static createOptimizedReadingSlides(
