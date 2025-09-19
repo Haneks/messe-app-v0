@@ -31,7 +31,7 @@ export class AELFService {
     try {
       // Format de date pour l'API AELF (YYYY-MM-DD)
       const formattedDate = date; // La date est déjà au bon format
-      const url = `${this.BASE_URL}v1/messes/${formattedDate}/${this.ZONE}`;
+      const url = `${this.BASE_URL}/v1/messes/${formattedDate}/${this.ZONE}`;
       
       console.log('Appel API AELF:', url);
       
@@ -40,7 +40,7 @@ export class AELFService {
         headers: {
           'Accept': 'application/json',
           'Content-Type': 'application/json',
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+          'User-Agent': 'Mozilla/5.0 (compatible; LiturgyApp/1.0)',
           'Cache-Control': 'no-cache',
           'Pragma': 'no-cache'
         },
@@ -61,7 +61,30 @@ export class AELFService {
         return this.getMockReadings(date, errorMessage);
       }
 
-      const data: AELFApiResponse = await response.json();
+      // Vérifier le Content-Type avant de parser le JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const textResponse = await response.text();
+        console.warn('Réponse non-JSON reçue:', textResponse.substring(0, 200));
+        
+        // Si c'est du HTML, c'est probablement une page d'erreur
+        if (textResponse.trim().startsWith('<!')) {
+          console.warn('Page HTML reçue au lieu de JSON, probablement une erreur serveur');
+          return this.getMockReadings(date, 'L\'API AELF a retourné une page d\'erreur au lieu des données JSON');
+        }
+        
+        return this.getMockReadings(date, 'Format de réponse invalide de l\'API AELF');
+      }
+      
+      let data: AELFApiResponse;
+      try {
+        const responseText = await response.text();
+        data = JSON.parse(responseText);
+      } catch (jsonError) {
+        console.error('Erreur de parsing JSON:', jsonError);
+        return this.getMockReadings(date, 'Erreur de format dans la réponse de l\'API AELF');
+      }
+      
       console.log('Réponse API AELF:', data);
       
       return this.parseAELFResponse(data, date);
@@ -97,9 +120,20 @@ export class AELFService {
       });
 
       if (response.ok) {
-        const data: AELFApiResponse = await response.json();
-        console.log('Succès avec l\'approche alternative');
-        return this.parseAELFResponse(data, date);
+        // Vérifier le Content-Type
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          try {
+            const responseText = await response.text();
+            const data: AELFApiResponse = JSON.parse(responseText);
+            console.log('Succès avec l\'approche alternative');
+            return this.parseAELFResponse(data, date);
+          } catch (jsonError) {
+            console.log('Erreur JSON avec approche alternative:', jsonError);
+          }
+        } else {
+          console.log('Réponse non-JSON avec approche alternative');
+        }
       }
     } catch (error) {
       console.log('Approche alternative échouée:', error);
