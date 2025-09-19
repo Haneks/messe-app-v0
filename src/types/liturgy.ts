@@ -34,6 +34,7 @@ export interface SlideItem {
 }
 
 export interface AELFResponse {
+  date?: string;
   date: string;
   readings: {
     first_reading?: LiturgyReading;
@@ -41,4 +42,5 @@ export interface AELFResponse {
     second_reading?: LiturgyReading;
     gospel?: LiturgyReading;
   };
+  error?: string;
 }

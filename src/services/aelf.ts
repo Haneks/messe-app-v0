@@ -1,14 +1,37 @@
 import { LiturgyReading, AELFResponse } from '../types/liturgy';
 
+// Interface pour la réponse complète de l'API AELF
+interface AELFApiResponse {
+  informations: {
+    date: string;
+    zone: string;
+    couleur: string;
+    temps_liturgique: string;
+    semaine: string;
+    jour: string;
+  };
+  messes: Array<{
+    nom: string;
+    lectures: Array<{
+      type: string;
+      titre: string;
+      contenu: string;
+      ref: string;
+      intro_lue: string;
+    }>;
+  }>;
+}
+
 // Service pour récupérer les textes liturgiques de l'AELF
 export class AELFService {
   private static readonly BASE_URL = 'https://api.aelf.org';
+  private static readonly ZONE = 'france';
 
   static async getReadingsForDate(date: string): Promise<AELFResponse> {
     try {
-      // Format de date pour l'API AELF (YYYY/MM/DD)
-      const formattedDate = date.replace(/-/g, '/');
-      const url = `${this.BASE_URL}/v1/messes/${formattedDate}`;
+      // Format de date pour l'API AELF (YYYY-MM-DD)
+      const formattedDate = date; // La date est déjà au bon format
+      const url = `${this.BASE_URL}/v1/messes/${formattedDate}/${this.ZONE}`;
       
       console.log('Appel API AELF:', url);
       
@@ -22,77 +45,105 @@ export class AELFService {
 
       if (!response.ok) {
         console.warn(`Erreur API AELF (${response.status}):`, response.statusText);
-        return this.getMockReadings(date);
+        return this.getMockReadings(date, `Erreur API: ${response.status} ${response.statusText}`);
       }
 
-      const data = await response.json();
+      const data: AELFApiResponse = await response.json();
       console.log('Réponse API AELF:', data);
       
       return this.parseAELFResponse(data, date);
     } catch (error) {
       console.error('Erreur lors de la récupération des textes AELF:', error);
       // Fallback vers les données simulées en cas d'erreur
-      return this.getMockReadings(date);
+      return this.getMockReadings(date, error instanceof Error ? error.message : 'Erreur inconnue lors du chargement des textes liturgiques');
     }
   }
 
-  private static parseAELFResponse(data: any, date: string): AELFResponse {
+  private static parseAELFResponse(data: AELFApiResponse, date: string): AELFResponse {
     const readings: AELFResponse['readings'] = {};
 
     try {
-      // Première lecture
-      if (data.lecture_1) {
-        readings.first_reading = {
-          id: 'first-' + date,
-          title: 'Première lecture',
-          reference: data.lecture_1.reference || '',
-          text: this.cleanText(data.lecture_1.text || data.lecture_1.contenu || ''),
-          type: 'first_reading'
-        };
+      // Vérifier que nous avons des messes
+      if (!data.messes || data.messes.length === 0) {
+        console.warn('Aucune messe trouvée dans la réponse AELF');
+        return this.getMockReadings(date, 'Aucune messe trouvée pour cette date');
       }
 
-      // Psaume
-      if (data.psaume) {
-        readings.psalm = {
-          id: 'psalm-' + date,
-          title: 'Psaume responsorial',
-          reference: data.psaume.reference || '',
-          text: this.cleanText(data.psaume.text || data.psaume.contenu || ''),
-          type: 'psalm'
-        };
+      // Prendre la première messe (généralement la messe principale)
+      const messe = data.messes[0];
+      
+      if (!messe.lectures || messe.lectures.length === 0) {
+        console.warn('Aucune lecture trouvée dans la messe');
+        return this.getMockReadings(date, 'Aucune lecture trouvée pour cette messe');
       }
 
-      // Deuxième lecture (si présente)
-      if (data.lecture_2) {
-        readings.second_reading = {
-          id: 'second-' + date,
-          title: 'Deuxième lecture',
-          reference: data.lecture_2.reference || '',
-          text: this.cleanText(data.lecture_2.text || data.lecture_2.contenu || ''),
-          type: 'second_reading'
-        };
-      }
-
-      // Évangile
-      if (data.evangile) {
-        readings.gospel = {
-          id: 'gospel-' + date,
-          title: 'Évangile',
-          reference: data.evangile.reference || '',
-          text: this.cleanText(data.evangile.text || data.evangile.contenu || ''),
-          type: 'gospel'
-        };
-      }
+      // Parser chaque lecture
+      messe.lectures.forEach((lecture, index) => {
+        const readingId = `${lecture.type}-${date}-${index}`;
+        const cleanedText = this.cleanText(lecture.contenu);
+        
+        // Mapper les types de lectures
+        switch (lecture.type.toLowerCase()) {
+          case 'premiere_lecture':
+          case 'première_lecture':
+          case 'lecture_1':
+            readings.first_reading = {
+              id: readingId,
+              title: lecture.titre || 'Première lecture',
+              reference: lecture.ref || '',
+              text: cleanedText,
+              type: 'first_reading'
+            };
+            break;
+            
+          case 'psaume':
+          case 'psaume_responsorial':
+            readings.psalm = {
+              id: readingId,
+              title: lecture.titre || 'Psaume responsorial',
+              reference: lecture.ref || '',
+              text: cleanedText,
+              type: 'psalm'
+            };
+            break;
+            
+          case 'deuxieme_lecture':
+          case 'deuxième_lecture':
+          case 'lecture_2':
+            readings.second_reading = {
+              id: readingId,
+              title: lecture.titre || 'Deuxième lecture',
+              reference: lecture.ref || '',
+              text: cleanedText,
+              type: 'second_reading'
+            };
+            break;
+            
+          case 'evangile':
+          case 'évangile':
+            readings.gospel = {
+              id: readingId,
+              title: lecture.titre || 'Évangile',
+              reference: lecture.ref || '',
+              text: cleanedText,
+              type: 'gospel'
+            };
+            break;
+            
+          default:
+            console.log(`Type de lecture non reconnu: ${lecture.type}`);
+        }
+      });
 
       // Si aucune lecture n'a été trouvée, utiliser les données simulées
       if (Object.keys(readings).length === 0) {
-        console.warn('Aucune lecture trouvée dans la réponse AELF, utilisation des données simulées');
-        return this.getMockReadings(date);
+        console.warn('Aucune lecture reconnue dans la réponse AELF, utilisation des données simulées');
+        return this.getMockReadings(date, 'Types de lectures non reconnus dans la réponse API');
       }
 
     } catch (parseError) {
       console.error('Erreur lors du parsing de la réponse AELF:', parseError);
-      return this.getMockReadings(date);
+      return this.getMockReadings(date, 'Erreur lors du traitement de la réponse API');
     }
 
     return { readings };
@@ -110,11 +161,15 @@ export class AELFService {
       .replace(/&gt;/g, '>')
       .replace(/&quot;/g, '"')
       .replace(/&#39;/g, "'")
+      .replace(/&rsquo;/g, "'")
+      .replace(/&lsquo;/g, "'")
+      .replace(/&rdquo;/g, '"')
+      .replace(/&ldquo;/g, '"')
       .replace(/\s+/g, ' ') // Normaliser les espaces multiples
       .trim();
   }
 
-  private static getMockReadings(date: string): AELFResponse {
+  private static getMockReadings(date: string, error?: string): AELFResponse {
     return {
       readings: {
         first_reading: {
@@ -138,7 +193,8 @@ export class AELFService {
           text: 'Ce jour-là, Jésus était sorti de la maison, et il était assis au bord de la mer. Auprès de lui se rassemblèrent des foules si grandes qu\'il monta dans une barque où il s\'assit ; toute la foule se tenait sur le rivage. Il leur dit beaucoup de choses en paraboles : « Voici que le semeur sortit pour semer. Comme il semait, des grains sont tombés au bord du chemin, et les oiseaux sont venus tout manger. »',
           type: 'gospel'
         }
-      }
+      },
+      error: error
     };
   }
 }
