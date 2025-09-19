@@ -199,7 +199,7 @@ services:
       - "443:443"
     volumes:
       - ./nginx-https.conf:/etc/nginx/nginx.conf:ro
-      - ./certbot/conf:/etc/letsencrypt:ro
+      - /etc/letsencrypt/live/haneks.ddns.net/:/etc/letsencrypt:ro
       - ./certbot/www:/var/www/certbot:ro
     depends_on:
       - liturgy-app
@@ -211,7 +211,7 @@ services:
     image: certbot/certbot
     container_name: certbot
     volumes:
-      - ./certbot/conf:/etc/letsencrypt
+      - /etc/letsencrypt/live/haneks.ddns.net/:/etc/letsencrypt
       - ./certbot/www:/var/www/certbot
     command: certonly --webroot -w /var/www/certbot --force-renewal --email $EMAIL -d $DOMAIN --agree-tos
     profiles:
