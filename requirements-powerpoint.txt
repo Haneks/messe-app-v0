@@ -1,4 +1,0 @@
-# PowerPoint Image Generator Requirements
-python-pptx>=0.6.21
-Pillow>=9.0.0
-requests>=2.28.0

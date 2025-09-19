@@ -7,7 +7,7 @@ export class PowerPointService {
   private static readonly MIN_WORDS_PER_SLIDE = 80;
   private static readonly MAX_WORDS_PER_SLIDE = 90;
 
-  static async exportPresentation(presentation: LiturgyPresentation, customFileName?: string): Promise<void> {
+  static async exportPresentation(presentation: LiturgyPresentation): Promise<void> {
     const pptx = new PptxGenJS();
     
     // Déterminer les couleurs liturgiques selon la date
@@ -38,8 +38,7 @@ export class PowerPointService {
             pptx, 
             reading, 
             liturgicalSeason, 
-            slideNumber,
-            (slideItem as any).imageUrl
+            slideNumber
           );
           slideNumber += readingSlides;
         }
@@ -50,8 +49,7 @@ export class PowerPointService {
             pptx, 
             song, 
             liturgicalSeason, 
-            slideNumber,
-            (slideItem as any).imageUrl
+            slideNumber
           );
           slideNumber += songSlides;
         }
@@ -59,7 +57,7 @@ export class PowerPointService {
     }
 
     // Télécharger le fichier
-    const fileName = customFileName || `${presentation.title}.pptx`;
+    const fileName = `${presentation.title}.pptx`;
     await pptx.writeFile({ fileName });
     
     // Log pour le débogage
@@ -70,19 +68,15 @@ export class PowerPointService {
   private static createTitleSlide(
     pptx: PptxGenJS, 
     presentation: LiturgyPresentation, 
-    slideNumber: number,
-    imageUrl?: string
+    slideNumber: number
   ): number {
     const titleSlide = pptx.addSlide();
     titleSlide.background = { color: '1E40AF' };
     
-    // Ajuster la largeur du texte si il y a une image
-    const textWidth = imageUrl ? 5.5 : 9;
-    
     titleSlide.addText(presentation.title, {
       x: 0.5,
       y: 2,
-      w: textWidth,
+      w: 9,
       h: 1.5,
       fontSize: 44,
       color: 'FFFFFF',
@@ -99,28 +93,13 @@ export class PowerPointService {
     }), {
       x: 0.5,
       y: 4,
-      w: textWidth,
+      w: 9,
       h: 1,
       fontSize: 24,
       color: 'FFFFFF',
       align: 'center',
       fontFace: 'Arial'
     });
-
-    // Ajouter l'image si disponible
-    if (imageUrl) {
-      try {
-        titleSlide.addImage({
-          path: imageUrl,
-          x: 6.5,
-          y: 1.5,
-          w: 2.5,
-          h: 2
-        });
-      } catch (error) {
-        console.warn('⚠️ Impossible d\'ajouter l\'image de titre:', error);
-      }
-    }
 
     // Numéro de slide
     titleSlide.addText(`${slideNumber}`, {
@@ -141,8 +120,7 @@ export class PowerPointService {
     pptx: PptxGenJS, 
     reading: LiturgyReading, 
     liturgicalSeason: any, 
-    startSlideNumber: number,
-    imageUrl?: string
+    startSlideNumber: number
   ): number {
     let slideCount = 0;
 
@@ -150,13 +128,10 @@ export class PowerPointService {
     const titleSlide = pptx.addSlide();
     titleSlide.background = { color: 'F8FAFC' };
 
-    // Ajuster la largeur du texte si il y a une image
-    const textWidth = imageUrl ? 5.5 : 9;
-
     titleSlide.addText(reading.title, {
       x: 0.5,
       y: 2.5,
-      w: textWidth,
+      w: 9,
       h: 1.2,
       fontSize: 36,
       color: '1E40AF',
@@ -168,7 +143,7 @@ export class PowerPointService {
     titleSlide.addText(reading.reference, {
       x: 0.5,
       y: 4,
-      w: textWidth,
+      w: 9,
       h: 0.8,
       fontSize: 24,
       color: '64748B',
@@ -176,21 +151,6 @@ export class PowerPointService {
       align: 'center',
       fontFace: 'Arial'
     });
-
-    // Ajouter l'image si disponible
-    if (imageUrl) {
-      try {
-        titleSlide.addImage({
-          path: imageUrl,
-          x: 6.5,
-          y: 1.5,
-          w: 2.5,
-          h: 3
-        });
-      } catch (error) {
-        console.warn('⚠️ Impossible d\'ajouter l\'image de lecture:', error);
-      }
-    }
 
     // Numéro de slide
     titleSlide.addText(`${startSlideNumber + slideCount}`, {
@@ -276,8 +236,7 @@ export class PowerPointService {
     pptx: PptxGenJS, 
     song: Song, 
     liturgicalSeason: any, 
-    startSlideNumber: number,
-    imageUrl?: string
+    startSlideNumber: number
   ): number {
     let slideCount = 0;
 
@@ -285,13 +244,10 @@ export class PowerPointService {
     const titleSlide = pptx.addSlide();
     titleSlide.background = { color: 'FEF3C7' };
 
-    // Ajuster la largeur du texte si il y a une image
-    const textWidth = imageUrl ? 5.5 : 9;
-
     titleSlide.addText(song.title, {
       x: 0.5,
       y: 2.5,
-      w: textWidth,
+      w: 9,
       h: 1.2,
       fontSize: 32,
       color: 'D97706',
@@ -305,7 +261,7 @@ export class PowerPointService {
       titleSlide.addText(subtitle, {
         x: 0.5,
         y: 4,
-        w: textWidth,
+        w: 9,
         h: 0.6,
         fontSize: 18,
         color: '92400E',
@@ -313,21 +269,6 @@ export class PowerPointService {
         align: 'center',
         fontFace: 'Arial'
       });
-    }
-
-    // Ajouter l'image si disponible
-    if (imageUrl) {
-      try {
-        titleSlide.addImage({
-          path: imageUrl,
-          x: 6.5,
-          y: 1.5,
-          w: 2.5,
-          h: 3
-        });
-      } catch (error) {
-        console.warn('⚠️ Impossible d\'ajouter l\'image de chant:', error);
-      }
     }
 
     // Numéro de slide
